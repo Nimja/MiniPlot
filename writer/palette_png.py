@@ -4,7 +4,10 @@ import math
 def write(config, data, file_name):
     # Get size and split up data.
     color_count = int(config.get('color_count', 1))
-    width = int(config.get('width', 1))
+    width = int(config.get('width', 0))
+    if not width:
+        width = _get_dynamic_width(len(data))
+
     height = math.ceil(len(data) / width)
     chunk_data = _chunks(data, width, int(config.get('background', 0)))
     # Print nice information.
@@ -21,14 +24,17 @@ def write(config, data, file_name):
     with open(file_name, 'wb') as f:
         w.write(f, chunk_data)
 
+    print("PNG exported:", file_name)
+
 def _get_palette(color_count, config):
     """ From config to palette.
     """
     result = []
     for i in range(color_count):
-        color = config.get('color{}'.format(i), '0,0,0')
-        color = color.split(',')
-        color = list(map(int, color))
+        # Default to transparent color.
+        color = config.get('color{}'.format(i), '0,0,0,0')
+        # Convert into integers.
+        color = list(map(int, color.split(',')))
         result.append(color)
     return result
 
@@ -50,3 +56,14 @@ def _chunks(lst, width, bg):
     # Yield chunks of exactly "width" size.
     for i in range(0, len(lst), width):
         yield lst[i:i + width]
+
+def _get_dynamic_width(total):
+    """
+    Attempt to get width that is the closest to a square, rounded up on the first 2 digits.
+    """
+    square_root = math.sqrt(total)
+    # Get number of digits.
+    digits = math.ceil(math.log10(square_root))
+    # Get multiplier that we want to use for rounding.
+    multiplier = 10 ** max(digits - 2, 1)
+    return math.ceil(square_root / multiplier) * multiplier
